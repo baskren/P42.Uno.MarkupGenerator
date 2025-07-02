@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+      <LangVersion>latest</LangVersion>
+
+      <IsTool>true</IsTool>
+      <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+
+      <CodeGenHelpersMode>source</CodeGenHelpersMode>
+      <UnoSourceGeneratorOutputPath>GeneratedFiles</UnoSourceGeneratorOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AvantiPoint.CodeGenHelpers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis" />
+
+      <!--
+    <PackageReference Include="Uno.CodeGen" />
+      
+      <PackageReference Include="System.Collections.Immutable"  />
+      <PackageReference Include="System.Memory"  />
+      <PackageReference Include="System.Runtime.CompilerServices.Unsafe" />
+      -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Uno\Extensions\Markup\Internals\" />
+  </ItemGroup>
+
+</Project>
+
