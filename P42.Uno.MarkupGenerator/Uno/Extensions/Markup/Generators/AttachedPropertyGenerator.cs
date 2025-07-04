@@ -27,6 +27,7 @@ internal sealed class AttachedPropertyGenerator :
       SourceProductionContext context,
       CancellationToken cancellationToken)
     {
+        
         if (infos.FirstOrDefault() is not AttachedPropertyInfo attachedPropertyInfo)
             return;
         GenerationTypeInfo generationTypeInfo = attachedPropertyInfo.GenerationTypeInfo;
@@ -40,6 +41,7 @@ internal sealed class AttachedPropertyGenerator :
         });
         CreatePropertyBuilder(generationTypeInfo, infos, context);
         CreateStylePropertyBuilder(generationTypeInfo, infos, context);
+        
     }
 
     private protected override string GetClassName(string typeName) => typeName + "Markup";
@@ -47,6 +49,8 @@ internal sealed class AttachedPropertyGenerator :
     private protected override EquatableArray<AttachedPropertyInfo>? GetInfoForType(
       INamedTypeSymbol namedType)
     {
+        return null;
+
         if (namedType.Name == "VisualStateManager" || namedType.IsGenericType)
             return null;
 
@@ -107,6 +111,7 @@ internal sealed class AttachedPropertyGenerator :
         foreach (AttachedPropertyInfo attachedProperty in attachedProperties)
         {
             AttachedPropertyInfo prop = attachedProperty;
+            /*
             builder.AddMethod(prop.Name).MakePublicMethod().WithReturnType(builderType).AddParameter(prop.PropertyTypeFullyQualified, prop.Name.Camelcase()).WithBody(w =>
             {
                 w.If("_builder is null").WithBody(x => x.AppendLine("throw new Exception(\"The StyleBuilder is null or has not been set.\");")).EndIf();
@@ -123,6 +128,7 @@ internal sealed class AttachedPropertyGenerator :
                 w.AppendLine("return this;");
             });
             
+            */
             ExtensibilityLocator.Extensions.ForEach(x =>
             {
                 if (!x.CanExtend(prop.PropertyTypeFullyQualified))
@@ -156,6 +162,8 @@ internal sealed class AttachedPropertyGenerator :
         foreach (AttachedPropertyInfo attachedProperty in attachedProperties)
         {
             AttachedPropertyInfo prop = attachedProperty;
+
+            /*
             builder.AddMethod(prop.Name).MakePublicMethod().WithReturnType(builder.Name).AddParameter(prop.PropertyTypeFullyQualified, prop.Name.Camelcase()).WithBody(w =>
             {
                 w.If("_element is null").WithBody(x => x.AppendLine("throw new Exception(\"The Element is null or has not been set.\");")).EndIf();
@@ -173,7 +181,8 @@ internal sealed class AttachedPropertyGenerator :
                 w.AppendLine($"builder.SetBinding(_element, {prop.DependencyProperty}, \"{prop.Name}\");");
                 w.AppendLine("return this;");
             });
-            
+            */
+
             ExtensibilityLocator.Extensions.ForEach(x =>
             {
                 if (!x.CanExtend(prop.PropertyTypeFullyQualified))

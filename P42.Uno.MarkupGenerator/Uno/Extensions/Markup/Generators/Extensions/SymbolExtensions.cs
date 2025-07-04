@@ -72,7 +72,10 @@ public static class SymbolExtensions
     public static bool HasPublicSetter(this IPropertySymbol propertySymbol)
         => propertySymbol.SetMethod != null 
             && propertySymbol.SetMethod.DeclaredAccessibility == Accessibility.Public;
-    
+
+    public static bool HasPublicAdder(this IEventSymbol eventSymbol)
+        => eventSymbol.AddMethod != null
+            && eventSymbol.AddMethod.DeclaredAccessibility == Accessibility.Public;
 
     public static bool IsCollectionWithAddMethod(this IPropertySymbol propertySymbol)
         => propertySymbol.IsCollection() 
@@ -91,7 +94,7 @@ public static class SymbolExtensions
     {
         for (var iTypeSymbol = symbol; iTypeSymbol != null; iTypeSymbol = iTypeSymbol.BaseType)
         {
-            if (ImmutableArrayExtensions.Any<ISymbol>
+            if (ImmutableArrayExtensions.Any
                 (
                     iTypeSymbol.GetMembers("Add"), 
                     x => x is IMethodSymbol iMethodSymbol 
@@ -104,7 +107,7 @@ public static class SymbolExtensions
         {
             foreach (INamespaceOrTypeSymbol allInterface in symbol.AllInterfaces)
             {
-                if (ImmutableArrayExtensions.Any<ISymbol>
+                if (ImmutableArrayExtensions.Any
                     (
                         allInterface.GetMembers("Add"), 
                         x => x is IMethodSymbol iMethodSymbol 
@@ -119,27 +122,32 @@ public static class SymbolExtensions
 
     public static bool IsContentProperty(this IPropertySymbol propertySymbol)
     {
-        var attributeData = propertySymbol.ContainingType.GetAllAttributes().FirstOrDefault<AttributeData>(x => x.AttributeClass?.Name == "ContentPropertyAttribute");
+        var attributeData = propertySymbol.ContainingType.GetAllAttributes().FirstOrDefault(x => x.AttributeClass?.Name == "ContentPropertyAttribute");
         if (attributeData == null || attributeData.NamedArguments.Length != 1)
             return false;
         var typedConstant = attributeData.NamedArguments[0].Value;
         return typedConstant.Value is string str && str == propertySymbol.Name;
     }
 
-    public static ImmutableArray<ISymbol> GetMembersForGeneration(this INamedTypeSymbol namedType)
+    public static ImmutableArray<ISymbol> GetSymbolsForGeneration<T>(this INamedTypeSymbol namedType) where T:ISymbol
     {
         var members = namedType.GetMembers();
-        var immutableArray = ImmutableArray.ToImmutableArray<IPropertySymbol>(members.OfType<IPropertySymbol>().Where<IPropertySymbol>(property => property.IsPropertyShadowing(namedType)));
+        var immutableArray = ImmutableArray.ToImmutableArray(members.OfType<T>().Where(property => property.IsShadowing(namedType)));
         var baseType = namedType.BaseType;
         if (baseType != null && baseType.IsGenericType && baseType.IsDependencyObject())
             ProcessGenericType(baseType);
-        var hiddenPropertiesWithDifferentTypes = ImmutableHashSet.ToImmutableHashSet<string>(ImmutableArrayExtensions.Where<IPropertySymbol>(immutableArray, shadowingProperty => ImmutableArrayExtensions.Any<ISymbol>(members, member => member.Name == shadowingProperty.Name && !SymbolEqualityComparer.Default.Equals(member, shadowingProperty))).Select<IPropertySymbol, string>(member => member.Name));
-        members = ImmutableArray.ToImmutableArray<ISymbol>(ImmutableArrayExtensions.Where<ISymbol>(members, member => !hiddenPropertiesWithDifferentTypes.Contains(member.Name)));
+        var hiddenPropertiesWithDifferentTypes = ImmutableHashSet
+            .ToImmutableHashSet(
+                ImmutableArrayExtensions
+                .Where(immutableArray, shadowingProperty => ImmutableArrayExtensions.Any(members, member => member.Name == shadowingProperty.Name && !SymbolEqualityComparer.Default.Equals(member, shadowingProperty))).Select(member => member.Name));
+        members = ImmutableArray
+            .ToImmutableArray(ImmutableArrayExtensions.Where(members, member => !hiddenPropertiesWithDifferentTypes.Contains(member.Name)));
+
         return members;
 
         void ProcessGenericType(INamedTypeSymbol baseNamedType)
         {
-            members = ImmutableArray.ToImmutableArray<ISymbol>(members.Union<ISymbol>(ImmutableArrayExtensions.Where<ISymbol>(baseNamedType.GetMembers(), member => !member.IsAbstract), SymbolEqualityComparer.Default));
+            members = ImmutableArray.ToImmutableArray(members.Union(ImmutableArrayExtensions.Where(baseNamedType.GetMembers(), member => !member.IsAbstract), SymbolEqualityComparer.Default));
             var baseType = baseNamedType.BaseType;
             if (baseType == null || !baseType.IsGenericType)
                 return;
@@ -147,11 +155,13 @@ public static class SymbolExtensions
         }
     }
 
-    private static bool IsPropertyShadowing(this IPropertySymbol property, INamedTypeSymbol namedType)
+
+
+    private static bool IsShadowing<T>(this T property, INamedTypeSymbol namedType) where T : ISymbol
     {
         for (var baseType = namedType.BaseType; baseType != null; baseType = baseType.BaseType)
         {
-            if (baseType.GetMembers(property.Name).OfType<IPropertySymbol>().Any<IPropertySymbol>())
+            if (baseType.GetMembers(property.Name).OfType<T>().Any())
                 return true;
         }
         return false;

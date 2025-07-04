@@ -14,7 +14,8 @@ internal class VisibilityExtensions : ITypeExtension
 {
     public bool CanExtend(string qualifiedTypeName)
     {
-        return qualifiedTypeName == "global::Microsoft.UI.Xaml.Visibility";
+        return false;
+        //return qualifiedTypeName == "global::Microsoft.UI.Xaml.Visibility";
     }
 
     public void WriteAttachedPropertyBuilderExtensions(

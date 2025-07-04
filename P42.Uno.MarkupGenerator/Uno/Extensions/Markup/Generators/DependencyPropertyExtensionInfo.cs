@@ -32,41 +32,50 @@ internal record DependencyPropertyExtensionInfo
 
     public static DependencyPropertyExtensionInfo From(
           IPropertySymbol propertySymbol,
-          GenerationTypeInfo typeInfo,
+          GenerationTypeInfo generationTypeInfo,
           bool isDependencyProperty,
           bool generationTypeIsFrameworkElement,
           bool isNotSealedAndIsShadowing)
     {
         var type = propertySymbol.Type;
-        bool flag1 = false;
-        bool flag2 = false;
+        var isDependencyObject = false;
+        var isFrameworkElement = false;
         for (; type != null; type = type.BaseType)
         {
             var typeExcludingGlobal = type.GetFullyQualifiedTypeExcludingGlobal();
-            if (type.Name == "FrameworkElement" && typeExcludingGlobal == "Microsoft.UI.Xaml.FrameworkElement")
+            if (type.Name == "FrameworkElement" 
+                && typeExcludingGlobal == "Microsoft.UI.Xaml.FrameworkElement")
             {
-                flag2 = true;
-                flag1 = true;
+                isFrameworkElement = true;
+                isDependencyObject = true;
                 break;
             }
-            if (type.Name == "DependencyObject" && typeExcludingGlobal == "Microsoft.UI.Xaml.DependencyObject")
+            if (type.Name == "DependencyObject" 
+                && typeExcludingGlobal == "Microsoft.UI.Xaml.DependencyObject")
             {
-                flag1 = true;
+                isDependencyObject = true;
                 break;
             }
         }
 
-        if (!flag1)
-            flag1 = ImmutableArrayExtensions.Any(propertySymbol.Type.AllInterfaces, x => x.Name == "DependencyObject" && x.GetFullyQualifiedTypeExcludingGlobal() == "Microsoft.UI.Xaml.DependencyObject");
+        if (!isDependencyObject)
+            isDependencyObject = ImmutableArrayExtensions.Any(
+                propertySymbol.Type.AllInterfaces, 
+                x => 
+                    x.Name == "DependencyObject" 
+                    && x.GetFullyQualifiedTypeExcludingGlobal() == "Microsoft.UI.Xaml.DependencyObject");
 
         bool PropertyIsCollection = propertySymbol.IsCollectionWithAddMethod();
         string typeExcludingGlobal1 = propertySymbol.Type.GetFullyQualifiedTypeExcludingGlobal();
-        bool IsTemplateType = (propertySymbol.Type as INamedTypeSymbol).IsFrameworkTemplate() || typeExcludingGlobal1 == "Microsoft.UI.Xaml.Controls.DataTemplateSelector";
+        bool IsTemplateType = 
+            (propertySymbol.Type as INamedTypeSymbol).IsFrameworkTemplate() 
+            || typeExcludingGlobal1 == "Microsoft.UI.Xaml.Controls.DataTemplateSelector";
         return new DependencyPropertyExtensionInfo(
             propertySymbol.Type.GetFullyQualifiedTypeIncludingGlobal(), 
-            propertySymbol.Name, propertySymbol.HasPublicSetter(), 
+            propertySymbol.Name, 
+            propertySymbol.HasPublicSetter(), 
             PropertyIsCollection, 
-            flag1 && !flag2, 
+            isDependencyObject && !isFrameworkElement, 
             propertySymbol.Type.IsReferenceTypeOrNullableValueType(), 
             propertySymbol.Type.IsInstantiable(), 
             generationTypeIsFrameworkElement, 
@@ -75,7 +84,9 @@ internal record DependencyPropertyExtensionInfo
             isDependencyProperty, 
             PropertyIsCollection 
                 ? DependencyPropertyExtensionInfo.GetAddMethodParameterTypes(propertySymbol) 
-                : new EquatableArray<MethodParameterInfo>(), isNotSealedAndIsShadowing, typeInfo
+                : new EquatableArray<MethodParameterInfo>(),
+            isNotSealedAndIsShadowing, 
+            generationTypeInfo
             );
     }
 

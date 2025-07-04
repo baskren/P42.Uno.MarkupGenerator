@@ -14,7 +14,8 @@ internal class ImageSourceTypeExtension : ITypeExtension
 {
     public bool CanExtend(string qualifiedTypeName)
     {
-        return qualifiedTypeName == "global::Microsoft.UI.Xaml.Media.ImageSource";
+        return false;
+        //return qualifiedTypeName == "global::Microsoft.UI.Xaml.Media.ImageSource";
     }
 
     public void WriteAttachedPropertyBuilderExtensions(

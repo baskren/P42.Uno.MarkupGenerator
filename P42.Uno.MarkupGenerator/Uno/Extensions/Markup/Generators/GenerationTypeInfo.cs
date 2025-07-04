@@ -26,22 +26,4 @@ internal record struct GenerationTypeInfo(
             typeSymbol.DeclaredAccessibility, 
             typeSymbol.IsSealed);
     
-    /*
-    [CompilerGenerated]
-    public readonly void Deconstruct(
-      out string TypeFullyQualifiedName,
-      out string TypeName,
-      out string TypeContainingNamespace,
-      out Accessibility DeclaredAccessibility,
-      out bool IsSealed)
-    {
-        TypeFullyQualifiedName = this.TypeFullyQualifiedName;
-        TypeName = this.TypeName;
-        TypeContainingNamespace = this.TypeContainingNamespace;
-        // ISSUE: cast to a reference type
-        // ISSUE: explicit reference operation
-        DeclaredAccessibility = this.DeclaredAccessibility;
-        IsSealed = this.IsSealed;
-    }
-    */
 }

@@ -45,9 +45,10 @@ internal sealed class DataContextGenerator :
 
     private protected override string GetClassName(string typeName) => typeName + "Markup";
 
-    private protected override EquatableArray<DataContextExtensionInfo>? GetInfoForType(
-      INamedTypeSymbol namedType)
+    private protected override EquatableArray<DataContextExtensionInfo>? GetInfoForType(INamedTypeSymbol namedType)
     {
+        return null;
+
         if (namedType.IsGenericType)
             return new EquatableArray<DataContextExtensionInfo>?();
         bool flag = false;

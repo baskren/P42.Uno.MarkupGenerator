@@ -14,7 +14,8 @@ internal class ResourceDictionaryTypeExtension : ITypeExtension
 {
     public bool CanExtend(string qualifiedTypeName)
     {
-        return qualifiedTypeName == "global::Microsoft.UI.Xaml.ResourceDictionary";
+        return false;
+        //return qualifiedTypeName == "global::Microsoft.UI.Xaml.ResourceDictionary";
     }
 
     public void WriteAttachedPropertyBuilderExtensions(

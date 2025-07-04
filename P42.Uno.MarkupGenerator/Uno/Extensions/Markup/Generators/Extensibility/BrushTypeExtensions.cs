@@ -4,8 +4,9 @@
 // MVID: E6210F11-717B-4BCF-8EB9-4DC107A6F4FB
 // Assembly location: C:\Users\ben\AppData\Local\Temp\Zehykin\f1db9ce6ec\analyzers\dotnet\cs\Uno.Extensions.Markup.Generators.dll
 
-using CodeGenHelpers;
 using System;
+using System.Drawing;
+using CodeGenHelpers;
 
 #nullable enable
 namespace Uno.Extensions.Markup.Generators.Extensibility;
@@ -21,12 +22,17 @@ internal class BrushTypeExtension : ITypeExtension
       AttachedPropertyInfo prop,
       Func<MethodBuilder> createBuilder)
     {
-        createBuilder().AddParameter<MethodBuilder>("global::Windows.UI.Color", "solidColor").WithBody((Action<ICodeWriter>)(w => w.AppendLine($"return {prop.Name}(new global::Microsoft.UI.Xaml.Media.SolidColorBrush(solidColor));")));
-        createBuilder().AddParameter<MethodBuilder>("string", "hexString").WithBody((Action<ICodeWriter>)(w =>
-        {
-            w.AppendLine("var solidColor = (global::Windows.UI.Color)global::Microsoft.UI.Xaml.Markup.XamlBindingHelper.ConvertValue(typeof(global::Windows.UI.Color), hexString);");
-            w.AppendLine($"return {prop.Name}(new global::Microsoft.UI.Xaml.Media.SolidColorBrush(solidColor));");
-        }));
+        createBuilder()
+            .AddParameter("global::Windows.UI.Color", "solidColor")
+            .WithBody(w => w.AppendLine($"return {prop.Name}(new global::Microsoft.UI.Xaml.Media.SolidColorBrush(solidColor));"));
+        createBuilder()
+            .AddParameter("string", "hexString")
+            .WithBody(w =>
+            {
+                w.AppendLine("var solidColor = (global::Windows.UI.Color)global::Microsoft.UI.Xaml.Markup.XamlBindingHelper.ConvertValue(typeof(global::Windows.UI.Color), hexString);");
+                w.AppendLine($"return {prop.Name}(new global::Microsoft.UI.Xaml.Media.SolidColorBrush(solidColor));");
+            });
+
     }
 
     public void WriteDependencyPropertyExtensions(
@@ -34,17 +40,22 @@ internal class BrushTypeExtension : ITypeExtension
       DependencyPropertyExtensionInfo info,
       Func<MethodBuilder> createBuilder)
     {
-        createBuilder().AddParameter<MethodBuilder>("global::Windows.UI.Color", "solidColor").WithBody((Action<ICodeWriter>)(w =>
-        {
-            w.AppendLine($"element.{info.PropertyName} = new global::Microsoft.UI.Xaml.Media.SolidColorBrush(solidColor);");
-            w.AppendLine("return element;");
-        }));
-        createBuilder().AddParameter<MethodBuilder>("string", "hexString").WithBody((Action<ICodeWriter>)(w =>
-        {
-            w.AppendLine("var solidColor = (global::Windows.UI.Color)global::Microsoft.UI.Xaml.Markup.XamlBindingHelper.ConvertValue(typeof(global::Windows.UI.Color), hexString);");
-            w.AppendLine($"element.{info.PropertyName} = new global::Microsoft.UI.Xaml.Media.SolidColorBrush(solidColor);");
-            w.AppendLine("return element;");
-        }));
+        createBuilder()
+            .AddParameter("global::Windows.UI.Color", "solidColor")
+            .WithBody(w =>
+            {
+                w.AppendLine($"element.{info.PropertyName} = new global::Microsoft.UI.Xaml.Media.SolidColorBrush(solidColor);");
+                w.AppendLine("return element;");
+            });
+        createBuilder()
+            .AddParameter("string", "hexString")
+            .WithBody(w =>
+            {
+                w.AppendLine("var solidColor = (global::Windows.UI.Color)global::Microsoft.UI.Xaml.Markup.XamlBindingHelper.ConvertValue(typeof(global::Windows.UI.Color), hexString);");
+                w.AppendLine($"element.{info.PropertyName} = new global::Microsoft.UI.Xaml.Media.SolidColorBrush(solidColor);");
+                w.AppendLine("return element;");
+            });
+
     }
 
     public void WriteStyleBuilderExtensions(
@@ -52,15 +63,20 @@ internal class BrushTypeExtension : ITypeExtension
       StyleBuilderInfo info,
       Func<MethodBuilder> createBuilder)
     {
-        createBuilder().AddParameter<MethodBuilder>("global::Windows.UI.Color", "solidColor").WithBody((Action<ICodeWriter>)(w =>
-        {
-            w.AppendLine("var brush = new global::Microsoft.UI.Xaml.Media.SolidColorBrush(solidColor);");
-            w.AppendLine($"return {info.PropertyName}(builder, brush);");
-        }));
-        createBuilder().AddParameter<MethodBuilder>("string", "hexString").WithBody((Action<ICodeWriter>)(w =>
-        {
-            w.AppendLine("var solidColor = (global::Windows.UI.Color)global::Microsoft.UI.Xaml.Markup.XamlBindingHelper.ConvertValue(typeof(global::Windows.UI.Color), hexString);");
-            w.AppendLine($"return {info.PropertyName}(builder, solidColor);");
-        }));
+        createBuilder()
+            .AddParameter("global::Windows.UI.Color", "solidColor")
+            .WithBody(w =>
+            {
+                w.AppendLine("var brush = new global::Microsoft.UI.Xaml.Media.SolidColorBrush(solidColor);");
+                w.AppendLine($"return {info.PropertyName}(builder, brush);");
+            });
+        createBuilder()
+            .AddParameter("string", "hexString")
+            .WithBody(w =>
+            {
+                w.AppendLine("var solidColor = (global::Windows.UI.Color)global::Microsoft.UI.Xaml.Markup.XamlBindingHelper.ConvertValue(typeof(global::Windows.UI.Color), hexString);");
+                w.AppendLine($"return {info.PropertyName}(builder, solidColor);");
+            });
+
     }
 }

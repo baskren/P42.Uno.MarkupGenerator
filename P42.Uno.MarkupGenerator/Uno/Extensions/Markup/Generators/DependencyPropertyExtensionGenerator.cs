@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using Uno.Extensions.Markup.Generators.Extensibility;
 using Uno.Extensions.Markup.Generators.Extensions;
@@ -21,14 +22,16 @@ namespace Uno.Extensions.Markup.Generators;
 internal sealed class DependencyPropertyExtensionGenerator :
   IncrementalExtensionsGeneratorBase<DependencyPropertyExtensionInfo>
 {
+
     private protected override EquatableArray<DependencyPropertyExtensionInfo>? GetInfoForType(INamedTypeSymbol namedType)
     {
         if (!namedType.IsDependencyObject() || namedType.IsGenericType)
             return new EquatableArray<DependencyPropertyExtensionInfo>?();
-        string name = namedType.Name;
-        if (name == "Binding" || name == "Setter")
+
+        if (namedType.Name is "Binding" or "Setter")
             return new EquatableArray<DependencyPropertyExtensionInfo>?();
-        bool generationTypeIsFrameworkElement = namedType.IsFrameworkTemplate();
+
+        var generationTypeIsFrameworkElement = namedType.IsFrameworkTemplate();
         for (var type = namedType; type != null; type = type.BaseType)
         {
             if (type.Name == "FrameworkElement" && type.GetFullyQualifiedTypeExcludingGlobal() == "Microsoft.UI.Xaml.FrameworkElement")
@@ -37,13 +40,16 @@ internal sealed class DependencyPropertyExtensionGenerator :
                 break;
             }
         }
-        var membersForGeneration = namedType.GetMembersForGeneration();
-        var iPropertySymbols = membersForGeneration.OfType<IPropertySymbol>().Where(x => x.IsCollectionWithAddMethod() || x.HasPublicSetter());
-        ImmutableArray<DependencyPropertyExtensionInfo>.Builder builder = ImmutableArray.CreateBuilder<DependencyPropertyExtensionInfo>();
-        GenerationTypeInfo typeInfo = GenerationTypeInfo.From(namedType);
-        foreach (IPropertySymbol ipropertySymbol in iPropertySymbols)
+
+        var membersForGeneration = namedType.GetSymbolsForGeneration<IPropertySymbol>();
+        var iPropertySymbols = membersForGeneration
+            .OfType<IPropertySymbol>()
+            .Where(x => x.IsCollectionWithAddMethod() || x.HasPublicSetter());
+        var builder = ImmutableArray.CreateBuilder<DependencyPropertyExtensionInfo>();
+        var typeInfo = GenerationTypeInfo.From(namedType);
+
+        foreach (IPropertySymbol property in iPropertySymbols)
         {
-            IPropertySymbol property = ipropertySymbol;
             if (
                 !property.IsStatic 
                 && !property.IsIndexer 
@@ -56,56 +62,48 @@ internal sealed class DependencyPropertyExtensionGenerator :
                )
             {
                 bool isDependencyProperty = ImmutableArrayExtensions.Any(membersForGeneration, m => m.Name == property.Name + "Property");
-                builder.Add(DependencyPropertyExtensionInfo.From(property, typeInfo, isDependencyProperty, generationTypeIsFrameworkElement, !namedType.IsSealed && DependencyPropertyExtensionGenerator.IsShadowing(property, namedType)));
+                builder.Add(DependencyPropertyExtensionInfo.From(
+                    property, 
+                    typeInfo, 
+                    isDependencyProperty, 
+                    generationTypeIsFrameworkElement, 
+                    !namedType.IsSealed && IsShadowing(property, namedType)
+                    ));
             }
         }
+
         return new EquatableArray<DependencyPropertyExtensionInfo>?(builder.ToImmutable().AsEquatableArray());
     }
 
     private static string AdjustParameterName(string parameterName)
-    {
-        return parameterName == "element" ? "value" : parameterName.EscapeIdentifier();
-    }
+        => parameterName == "element" 
+            ? "value" 
+            : parameterName.EscapeIdentifier();
+    
 
     private static bool IsIgnoredProperty(IPropertySymbol property)
     {
-        if (property.Name == "TemplatedParent" || property.Name == "XamlRoot")
-            return true;
-        string name1 = property.Name;
-        if (name1 == "Count" || name1 == "IsReadOnly")
-            return property.ContainingType.Name == "ColorKeyFrameCollection";
-        if (property.Name == "RoutedEvent")
-            return property.ContainingType.Name == "EventTrigger";
-        string name2 = property.Name;
-        if (name2 == "AreDimensionsConstrained" || name2 == "RenderPhase")
-            return property.ContainingType.Name == "FrameworkElement";
-        if (property.Name == "IsParsing")
+        return property.Name switch
         {
-            string name3 = property.ContainingType.Name;
-            return name3 == "FrameworkElement" || name3 == "ResourceDictionary";
-        }
-        if (property.Name == "BasedOn")
-            return property.ContainingType.Name == "Style";
-        if (property.Name == "TargetType")
-        {
-            string name4 = property.ContainingType.Name;
-            return name4 == "Style" || name4 == "ControlTemplate";
-        }
-        if (property.Name == "Name")
-        {
-            string name5 = property.ContainingType.Name;
-            return name5 == "VisualState" || name5 == "VisualStateGroup";
-        }
-        return property.Name == "ItemsPanelRoot" && property.ContainingType.Name == "ItemsControl";
+            "TemplatedParent" or "XamlRoot" => true,
+            "Count" or "IsReadOnly" => property.ContainingType.Name == "ColorKeyFrameCollection",
+            "RoutedEvent" => property.ContainingType.Name == "EventTrigger",
+            "AreDimensionsConstrained" or "RenderPhase" => property.ContainingType.Name == "FrameworkElement",
+            "IsParsing" => property.ContainingType.Name is "FrameworkElement" or "ResourceDictionary",
+            "BasedOn" => property.ContainingType.Name == "Style",
+            "TargetType" => property.ContainingType.Name is "Style" or "ControlTemplate",
+            "Name" => property.ContainingType.Name is "VisualState" or "VisualStateGroup",
+            _ => property.Name == "ItemsPanelRoot" && property.ContainingType.Name == "ItemsControl"
+        };
     }
 
     private static bool IsShadowing(IPropertySymbol property, INamedTypeSymbol namedType)
     {
-        var inamedTypeSymbol = namedType;
-        while (inamedTypeSymbol != null && !(inamedTypeSymbol.Name == "UIElement"))
+        var iNamedTypeSymbol = namedType;
+        while (iNamedTypeSymbol != null && !(iNamedTypeSymbol.Name == "UIElement"))
         {
-            inamedTypeSymbol = inamedTypeSymbol.BaseType;
-            if (inamedTypeSymbol != null && inamedTypeSymbol.GetMembers(property.Name).Length > 0)
+            iNamedTypeSymbol = iNamedTypeSymbol.BaseType;
+            if (iNamedTypeSymbol != null && iNamedTypeSymbol.GetMembers(property.Name).Length > 0)
                 return true;
         }
         return false;
@@ -114,29 +112,35 @@ internal sealed class DependencyPropertyExtensionGenerator :
     private protected override string GetClassName(string typeName) => typeName + "Markup";
 
     private protected override void GenerateCodeFromInfosCore(
-      ClassBuilder builder,
+      ClassBuilder classBuilder,
       EquatableArray<DependencyPropertyExtensionInfo> infos,
       SourceProductionContext context,
       CancellationToken cancellationToken)
     {
-        foreach (DependencyPropertyExtensionInfo info in infos)
+        var sb = new StringBuilder();
+
+        foreach (var info in infos)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            GeneratePropertyExtensions(builder, info);
+            GeneratePropertyExtensions(classBuilder, info);
         }
         infos.FirstOrDefault();
     }
 
     private void GeneratePropertyExtensions(
-      ClassBuilder builder,
+      ClassBuilder classBuilder,
       DependencyPropertyExtensionInfo info)
     {
-        string type = info.PropertyTypeFullyQualified;
+        var returnTypeName = info.PropertyTypeFullyQualified;
+
         if (info.PropertyHasPublicSetter)
         {
-            string parameterName = DependencyPropertyExtensionGenerator.AdjustParameterName(info.PropertyName.Camelcase());
-            MethodBuilder methodBuilder = DependencyPropertyExtensionGenerator.CreatePropertyBuilder(ref builder, info.GenerationTypeInfo, info.PropertyName, info.IsNotSealedAndIsShadowing).AddParameter(type, parameterName);
-            if (type == "global::Microsoft.UI.Xaml.ResourceDictionary")
+            /*
+            var parameterName = AdjustParameterName(info.PropertyName.Camelcase());
+            var methodBuilder = CreatePropertyBuilder(ref classBuilder, info.GenerationTypeInfo, info.PropertyName, info.IsNotSealedAndIsShadowing)
+                .AddParameter(returnTypeName, parameterName);
+
+            if (returnTypeName == "global::Microsoft.UI.Xaml.ResourceDictionary")
                 methodBuilder.WithBody(w =>
                 {
                     if (info.PropertyName == "Resources")
@@ -149,7 +153,7 @@ internal sealed class DependencyPropertyExtensionGenerator :
                     w.AppendLine("return element;");
                 });
             else
-                methodBuilder.WithBody((Action<ICodeWriter>)(w =>
+                methodBuilder.WithBody(w =>
                 {
                     if (info.PropertyIsDependencyObjectButNotFrameworkElement)
                         w.AppendLine($"ResourceObserver.SetResourceParent({parameterName}, element);");
@@ -161,26 +165,34 @@ internal sealed class DependencyPropertyExtensionGenerator :
                                 w.ForEach("var item", parameterName).WithBody(_ => _.If("item is Microsoft.UI.Xaml.DependencyObject dObj").WithBody(ifWrite => ifWrite.AppendLine("ResourceObserver.SetResourceParent(dObj, element);")).EndIf());
                         }
                     }
+
                     string str = $"element.{info.PropertyName} = {parameterName}";
-                    if (type == "global::Microsoft.UI.Xaml.Style")
+                    if (returnTypeName == "global::Microsoft.UI.Xaml.Style")
                         w.AppendLine($"global::Uno.Extensions.Markup.LoadingObserver.AddLoadingCallback(element, _ => {str});");
                     else
                         w.AppendLine(str + ";");
                     w.AppendLine("return element;");
-                }));
-            ((IEnumerable<ITypeExtension>)ExtensibilityLocator.Extensions).ForEach(x =>
+                });
+            */
+
+            ExtensibilityLocator.Extensions.ForEach(x =>
             {
                 if (!x.CanExtend(info.PropertyTypeFullyQualified))
                     return;
-                x.WriteDependencyPropertyExtensions(builder, info, () => DependencyPropertyExtensionGenerator.CreatePropertyBuilder(ref builder, info.GenerationTypeInfo, info.PropertyName));
+                x.WriteDependencyPropertyExtensions(classBuilder, info, () => CreatePropertyBuilder(ref classBuilder, info.GenerationTypeInfo, info.PropertyName));
             });
+
+            /*
             if (info.PropertyIsCollection)
-                CreateCollectionExtension(builder, info);
+                CreateCollectionExtension(classBuilder, info);
+            */
             if (!info.IsDependencyProperty)
                 return;
+
+            /*
             if (!info.IsTemplateType)
             {
-                CreatePropertyBuilder(ref builder, info.GenerationTypeInfo, info.PropertyName)
+                CreatePropertyBuilder(ref classBuilder, info.GenerationTypeInfo, info.PropertyName)
                     .AddGeneric("TSource")
                     .AddParameter("Func<TSource>", "propertyBinding")
                     .AddParameter("[CallerArgumentExpression(\"propertyBinding\")]string?", "propertyBindingExpression = null")
@@ -191,10 +203,10 @@ internal sealed class DependencyPropertyExtensionGenerator :
                         else
                             w.AppendLine($"return {info.PropertyName}<T>(element, _ => _.Binding(propertyBinding, propertyBindingExpression));");
                     });
-                CreatePropertyBuilder(ref builder, info.GenerationTypeInfo, info.PropertyName)
+                CreatePropertyBuilder(ref classBuilder, info.GenerationTypeInfo, info.PropertyName)
                     .AddGeneric("TSource")
                     .AddParameter("Func<TSource>", "propertyBinding")
-                    .AddParameter($"Func<TSource, {type}>", "convertDelegate")
+                    .AddParameter($"Func<TSource, {returnTypeName}>", "convertDelegate")
                     .AddParameter("[CallerArgumentExpression(\"propertyBinding\")]string?", "propertyBindingExpression = null")
                     .WithBody(w =>
                     {
@@ -205,22 +217,24 @@ internal sealed class DependencyPropertyExtensionGenerator :
                     });
             }
             
-            CreatePropertyBuilder(ref builder, info.GenerationTypeInfo, info.PropertyName)
-                .AddParameter($"Action<IDependencyPropertyBuilder<{type}>>", "configureProperty")
+            CreatePropertyBuilder(ref classBuilder, info.GenerationTypeInfo, info.PropertyName)
+                .AddParameter($"Action<IDependencyPropertyBuilder<{returnTypeName}>>", "configureProperty")
                 .WithBody(w =>
                 {
-                    w.AppendLine($"var builder = DependencyPropertyBuilder<{type}>.Instance;");
+                    w.AppendLine($"var builder = DependencyPropertyBuilder<{returnTypeName}>.Instance;");
                     w.AppendLine("configureProperty(builder);");
                     w.AppendLine($"builder.SetBinding(element, {info.GenerationTypeInfo.TypeFullyQualifiedName}.{info.PropertyName}Property, \"{info.PropertyName}\");");
                     w.AppendLine("return element;");
                 });
-                
+               */ 
         }
         else
         {
+            /*
             if (!info.PropertyIsCollection || info.PropertyDeclaredAccessibility != Accessibility.Public)
                 return;
-            CreateCollectionExtension(builder, info);
+            CreateCollectionExtension(classBuilder, info);
+            */
         }
     }
 
@@ -228,11 +242,11 @@ internal sealed class DependencyPropertyExtensionGenerator :
     {
         EquatableArray<MethodParameterInfo> methodParameterTypes = info.MethodParameterTypes;
         string parameterName = info.PropertyName.EndsWith("s") || info.PropertyName == "Children" ? info.PropertyName.Camelcase() : info.PropertyName.Camelcase() + "s";
-        parameterName = DependencyPropertyExtensionGenerator.AdjustParameterName(parameterName);
+        parameterName = AdjustParameterName(parameterName);
         foreach (MethodParameterInfo methodParameterInfo in methodParameterTypes)
         {
             MethodParameterInfo parameterSymbol = methodParameterInfo;
-            DependencyPropertyExtensionGenerator.CreatePropertyBuilder(ref builder, info.GenerationTypeInfo, info.PropertyName).AddParameter($"params {parameterSymbol.ParameterTypeFullyQualified}[]", parameterName).WithBody(w =>
+            CreatePropertyBuilder(ref builder, info.GenerationTypeInfo, info.PropertyName).AddParameter($"params {parameterSymbol.ParameterTypeFullyQualified}[]", parameterName).WithBody(w =>
             {
                 if (info.PropertyHasPublicSetter && info.PropertyTypeIsReferenceTypeOrNullableValueType && info.PropertyTypeIsInstantiable)
                     w.AppendLine($"element.{info.PropertyName} ??= new {info.PropertyTypeFullyQualified}();");
@@ -254,25 +268,26 @@ internal sealed class DependencyPropertyExtensionGenerator :
     }
 
     private static MethodBuilder CreatePropertyBuilder(
-      ref ClassBuilder builder,
+      ref ClassBuilder classBuilder,
       GenerationTypeInfo generationTypeInfo,
       string propertyName,
       bool forceStronglyTyped = false)
     {
-        var parameterized = builder
+        var parameterized = classBuilder
             .AddMethod(propertyName)
             .MakePublicMethod()
             .MakeStaticMethod()
             .AddAttribute("global::Uno.Extensions.Markup.Internals.MarkupExtensionAttribute");
 
         if (generationTypeInfo.IsSealed | forceStronglyTyped)
-            parameterized.
-                AddParameter("this " + generationTypeInfo.TypeFullyQualifiedName, "element")
+            parameterized
+                .AddParameter("this " + generationTypeInfo.TypeFullyQualifiedName, "element")
                 .WithReturnType(generationTypeInfo.TypeFullyQualifiedName);
         else
             parameterized
                 .AddGeneric("T", _ => _.AddConstraint(generationTypeInfo.TypeFullyQualifiedName))
-                .AddParameter("this T", "element").WithReturnType("T");
+                .AddParameter("this T", "element")
+                .WithReturnType("T");
 
         return parameterized;
     }

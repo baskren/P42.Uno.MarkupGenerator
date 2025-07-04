@@ -14,7 +14,8 @@ internal class FontFamilyTypeExtension : ITypeExtension
 {
     public bool CanExtend(string qualifiedTypeName)
     {
-        return qualifiedTypeName == "global::Microsoft.UI.Xaml.Media.FontFamily";
+        return false;
+        //return qualifiedTypeName == "global::Microsoft.UI.Xaml.Media.FontFamily";
     }
 
     public void WriteAttachedPropertyBuilderExtensions(

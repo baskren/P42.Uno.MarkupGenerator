@@ -1,0 +1,6 @@
+<Project>
+  <ItemGroup>
+    <!-- Automatically add a reference to the third-party package -->
+    <PackageReference Include="P42.Serilog.QuickLog" Version="1.0.9" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

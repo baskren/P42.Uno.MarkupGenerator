@@ -56,7 +56,7 @@ internal sealed class StyleBuilderGenerator : IncrementalExtensionsGeneratorBase
 
         var builder = ImmutableArray.CreateBuilder<StyleBuilderInfo>();
         var typeInfo = GenerationTypeInfo.From(namedType);
-        var membersForGeneration = namedType.GetMembersForGeneration();
+        var membersForGeneration = namedType.GetSymbolsForGeneration<IPropertySymbol>();
         foreach (var iPropertySymbol in membersForGeneration.OfType<IPropertySymbol>())
         {
             IPropertySymbol property = iPropertySymbol;
@@ -83,6 +83,8 @@ internal sealed class StyleBuilderGenerator : IncrementalExtensionsGeneratorBase
         string propName = info.PropertyName.Camelcase();
         string dpName = $"{containingType}.{info.PropertyName}Property";
         string propPath = $"\"{info.PropertyName}\"";
+
+        /*
         CreateBuilder(builder, info.GenerationTypeInfo, info.PropertyName).AddParameter<MethodBuilder>(qualifiedTypeName, propName).WithBody(w =>
         {
             if (info.IsNullableValueType)
@@ -91,13 +93,17 @@ internal sealed class StyleBuilderGenerator : IncrementalExtensionsGeneratorBase
                 w.AppendLine($"builder.Add({dpName}, {propPath}, {propName});");
             w.AppendLine("return builder;");
         });
-        CreateBuilder(builder, info.GenerationTypeInfo, info.PropertyName).AddParameter<MethodBuilder>($"Action<IDependencyPropertyBuilder<{qualifiedTypeName}>>", "configureProperty").WithBody(w => w.AppendLine($"return builder.Add({dpName}, \"{info.PropertyName}\", {propPath}, configureProperty);"));
+         CreateBuilder(builder, info.GenerationTypeInfo, info.PropertyName).AddParameter<MethodBuilder>($"Action<IDependencyPropertyBuilder<{qualifiedTypeName}>>", "configureProperty").WithBody(w => w.AppendLine($"return builder.Add({dpName}, \"{info.PropertyName}\", {propPath}, configureProperty);"));
+        */
+
         ExtensibilityLocator.Extensions.ForEach<ITypeExtension>(x =>
         {
             if (!x.CanExtend(qualifiedTypeName))
                 return;
             x.WriteStyleBuilderExtensions(builder, info, () => CreateBuilder(builder, info.GenerationTypeInfo, info.PropertyName));
         });
+
+        /*
         if (qualifiedTypeName == "global::Microsoft.UI.Xaml.Controls.ControlTemplate")
         {
             GenerateControlTemplateExtensions(builder, info);
@@ -108,6 +114,7 @@ internal sealed class StyleBuilderGenerator : IncrementalExtensionsGeneratorBase
                 return;
             GenerateFrameworkTemplateStyleBuilderExtensions(builder, info);
         }
+        */
     }
 
     private static void GenerateControlTemplateExtensions(ClassBuilder builder, StyleBuilderInfo info)

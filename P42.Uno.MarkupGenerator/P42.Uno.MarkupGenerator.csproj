@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+        <TargetFramework>netstandard2.0</TargetFramework>
       <LangVersion>latest</LangVersion>
 
       <IsTool>true</IsTool>
@@ -9,6 +9,17 @@
 
       <CodeGenHelpersMode>source</CodeGenHelpersMode>
       <UnoSourceGeneratorOutputPath>GeneratedFiles</UnoSourceGeneratorOutputPath>
+
+
+      <OutputItemType>Analyzer</OutputItemType>
+      <Pack>true</Pack>
+      <PackageId>P42.Uno.MarkupGenerator</PackageId>
+      <Version>1.0.0</Version>
+      <Authors>42nd Parallel</Authors>
+      <Description>Example Roslyn Source Generator</Description>
+      <IncludeBuildOutput>true</IncludeBuildOutput>
+      <PackageOutputPath>./nupkg</PackageOutputPath>
+      
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,9 +39,12 @@
       -->
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Uno\Extensions\Markup\Internals\" />
-  </ItemGroup>
+
+    <ItemGroup>
+        <Compile Remove="Resources\**\*.cs" />
+        <EmbeddedResource Include="Resources\**\*.cs" />
+        <None Include="buildTransitive\P42.Uno.MarkupGenerator.targets" Pack="true" PackagePath="buildTransitive\P42.Uno.MarkupGenerator.targets" />
+    </ItemGroup>
 
 </Project>
 

@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace P42.Uno.MarkupGenerator;
 
 [Generator]
-public class HandlerGenerator : IIncrementalGenerator
+public class SupportingClassesGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -27,6 +27,21 @@ public class HandlerGenerator : IIncrementalGenerator
         Compilation compilation, 
         ImmutableArray<ClassDeclarationSyntax> typeList)
     {
+        var asm = GetType().Assembly;
+        var resources = asm.GetManifestResourceNames();
+
+        foreach (var resource in resources)
+        {
+            if (!resource.EndsWith(".cs"))
+                continue;
+            var name = resource.Substring(34, resource.Length - 3 - 34);
+            using var stream = asm.GetManifestResourceStream(resource);
+            using var reader = new StreamReader(stream);
+            var code = reader.ReadToEnd();
+            context.AddSource($"{name}.g.cs", code);
+        }
+
+        /*
         var code = """
             namespace SampleSourceGenerator;
 
@@ -37,5 +52,6 @@ public class HandlerGenerator : IIncrementalGenerator
             """;
 
         context.AddSource("ClassName.g.cs", code);
+        */
     }
 }

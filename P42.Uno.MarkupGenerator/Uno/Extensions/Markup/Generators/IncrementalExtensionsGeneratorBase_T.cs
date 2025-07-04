@@ -33,6 +33,7 @@ internal abstract class IncrementalExtensionsGeneratorBase<TModel> : IIncrementa
         {
             if (!a.HasValue || a.Value.IsEmpty)
                 return;
+
             GenerateCodeFromInfos(spc, a.Value);
         });
 
@@ -40,7 +41,7 @@ internal abstract class IncrementalExtensionsGeneratorBase<TModel> : IIncrementa
             IncrementalValueProviderExtensions.Select(IncrementalValueProviderExtensions.WithComparer(IncrementalValueProviderExtensions.Select(context1.CompilationProvider, (compilation, cancellationToken) =>
         {
             var typeByMetadataName = compilation.GetTypeByMetadataName(QualifiedTypeName.GenerateMarkupForAssemblyAttribute);
-            var attributes = ((ISymbol)compilation.Assembly).GetAttributes();
+            var attributes = compilation.Assembly.GetAttributes();
             var builder = ImmutableArray.CreateBuilder<IAssemblySymbol>();
             foreach (var attributeData in attributes)
             {
@@ -61,7 +62,7 @@ internal abstract class IncrementalExtensionsGeneratorBase<TModel> : IIncrementa
                 foreach (INamedTypeSymbol publicClass in assembly.GlobalNamespace.GetPublicClasses())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (!((ISymbol)publicClass).IsNotImplemented())
+                    if (!publicClass.IsNotImplemented())
                     {
                         EquatableArray<TModel>? infoForType = GetInfoForType(publicClass);
                         if (infoForType.HasValue)
@@ -74,6 +75,7 @@ internal abstract class IncrementalExtensionsGeneratorBase<TModel> : IIncrementa
             }
             return builder.ToImmutableArray().AsEquatableArray();
         });
+
         context1.RegisterSourceOutput(incrementalValueProvider, (context3, infosArray) =>
         {
             foreach (EquatableArray<TModel> infos in infosArray)
@@ -122,14 +124,35 @@ internal abstract class IncrementalExtensionsGeneratorBase<TModel> : IIncrementa
     private void GenerateCodeFromInfos(SourceProductionContext context, EquatableArray<TModel> infos)
     {
         string clrNamespace = infos[0].GenerationTypeInfo.TypeContainingNamespace;
+
         if (clrNamespace == "Microsoft.UI.Xaml.Controls.Primitives")
             clrNamespace = "Microsoft.UI.Xaml.Controls";
-        Accessibility accessModifier = this.GeneratedClassAccessibilityOverride ?? infos[0].GenerationTypeInfo.DeclaredAccessibility;
-        ClassBuilder builder = CodeBuilder.Create(clrNamespace).Nullable(NullableState.Enable).AddClass(this.GetClassName(infos[0].GenerationTypeInfo.TypeName)).WithAccessModifier(accessModifier).MakeStaticClass().DisableWarning("Uno0001").AddNamespaceImport("System").AddNamespaceImport("System.Collections.Generic").AddNamespaceImport("System.Runtime.CompilerServices").AddNamespaceImport("System.Linq").AddNamespaceImport("System.Linq.Expressions").AddNamespaceImport("Microsoft.UI.Xaml").AddNamespaceImport("Microsoft.UI.Xaml.Data").AddNamespaceImport("Microsoft.UI.Xaml.Markup").AddNamespaceImport("Uno.Extensions.Markup");
+
+        Accessibility accessModifier = GeneratedClassAccessibilityOverride ?? infos[0].GenerationTypeInfo.DeclaredAccessibility;
+        ClassBuilder builder = CodeBuilder
+            .Create(clrNamespace)
+            .Nullable(NullableState.Enable)
+            .AddClass(GetClassName(infos[0].GenerationTypeInfo.TypeName))
+            .WithAccessModifier(accessModifier)
+            .MakeStaticClass()
+            .DisableWarning("Uno0001")
+            .AddNamespaceImport("System")
+            .AddNamespaceImport("System.Collections.Generic")
+            .AddNamespaceImport("System.Runtime.CompilerServices")
+            .AddNamespaceImport("System.Linq")
+            .AddNamespaceImport("System.Linq.Expressions")
+            .AddNamespaceImport("Microsoft.UI.Xaml")
+            .AddNamespaceImport("Microsoft.UI.Xaml.Data")
+            .AddNamespaceImport("Microsoft.UI.Xaml.Markup")
+            .AddNamespaceImport("Uno.Extensions.Markup");
+
         if (infos[0].GenerationTypeInfo.TypeContainingNamespace == "Microsoft.UI.Xaml.Controls.Primitives")
             builder.AddNamespaceImport("Microsoft.UI.Xaml.Controls.Primitives");
-        this.GenerateCodeFromInfosCore(builder, infos, context, context.CancellationToken);
-        this.AddSource(context, builder, infos[0].GenerationTypeInfo);
+
+        
+        GenerateCodeFromInfosCore(builder, infos, context, context.CancellationToken);
+        
+        AddSource(context, builder, infos[0].GenerationTypeInfo);
     }
 
     private protected void AddSource(
@@ -138,13 +161,13 @@ internal abstract class IncrementalExtensionsGeneratorBase<TModel> : IIncrementa
       GenerationTypeInfo generationTypeInfo,
       string? fileNamePrefix = null)
     {
-        if (!builder.Methods.Any<MethodBuilder>())
+        if (!builder.Methods.Any())
             return;
         builder.AddNamespaceImport("System.CodeDom.Compiler");
-        foreach (MethodBuilder method in (IEnumerable<MethodBuilder>)builder.Methods)
-            method.AddAttribute($"GeneratedCode(\"Uno.Extensions.Markup\", \"{IncrementalExtensionsGeneratorBase<TModel>.ProductVersion}\")");
-        string str1 = builder.Build();
-        string str2 = this.GetGeneratedFileName(builder, generationTypeInfo);
+        foreach (var method in (IEnumerable<MethodBuilder>)builder.Methods)
+            method.AddAttribute($"GeneratedCode(\"Uno.Extensions.Markup\", \"{ProductVersion}\")");
+        var str1 = builder.Build();
+        var str2 = this.GetGeneratedFileName(builder, generationTypeInfo);
         if (!string.IsNullOrEmpty(fileNamePrefix))
             str2 = $"{fileNamePrefix}_{str2}";
         context.AddSource(str2 + ".g.cs", str1);

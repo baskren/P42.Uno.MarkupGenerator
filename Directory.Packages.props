@@ -13,7 +13,8 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.4.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis" Version="4.4.0" />
     <PackageVersion Include="Uno.Extensions.Markup.WinUI" Version="6.0.15" />
-    <!--
+      <!--
+    <PackageVersion Include="Uno.Extensions.Markup.Generators" Version="6.0.15" />
     <PackageVersion Include="Uno.CodeGen" Version="2.0.0-dev.10" />
     <PackageVersion Include="System.Collections.Immutable" Version="6.0.0.0" />
     <PackageVersion Include="System.Memory" Version="4.5.5" />

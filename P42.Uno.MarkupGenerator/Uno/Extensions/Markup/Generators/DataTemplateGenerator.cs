@@ -19,13 +19,15 @@ namespace Uno.Extensions.Markup.Generators;
 [Generator("C#", [])]
 internal sealed class DataTemplateGenerator : IncrementalExtensionsGeneratorBase<DataTemplateInfo>
 {
-    private protected override EquatableArray<DataTemplateInfo>? GetInfoForType(
-      INamedTypeSymbol namedType)
+    private protected override EquatableArray<DataTemplateInfo>? GetInfoForType(INamedTypeSymbol namedType)
     {
+        return null;
+
         if (namedType.IsGenericType)
             return new EquatableArray<DataTemplateInfo>?();
 
         var builder = ImmutableArray.CreateBuilder<DataTemplateInfo>();
+
         var GenerationTypeInfo =Generators.GenerationTypeInfo.From(namedType);
         foreach (var iPropertySymbol in namedType.GetMembers().OfType<IPropertySymbol>())
         {
@@ -60,7 +62,15 @@ internal sealed class DataTemplateGenerator : IncrementalExtensionsGeneratorBase
                     {
                         bool flag = property.Type.Name == "DataTemplate" && typeExcludingGlobal == "Microsoft.UI.Xaml.DataTemplate";
                         string PropertyTypeFullyQualifiedName = "global::" + typeExcludingGlobal;
-                        builder.Add(new DataTemplateInfo(PropertyTypeFullyQualifiedName, isControlTemplate, flag, false, flag, property.Name, property.Type.Name, GenerationTypeInfo));
+                        builder.Add(new DataTemplateInfo(
+                            PropertyTypeFullyQualifiedName, 
+                            isControlTemplate, 
+                            flag, 
+                            false, 
+                            flag, 
+                            property.Name, 
+                            property.Type.Name, 
+                            GenerationTypeInfo));
                     }
                 }
             }
@@ -76,7 +86,7 @@ internal sealed class DataTemplateGenerator : IncrementalExtensionsGeneratorBase
     private protected override string GetClassName(string typeName) => typeName + "Markup";
 
     private protected override void GenerateCodeFromInfosCore(
-      ClassBuilder builder,
+      ClassBuilder classBuilder,
       EquatableArray<DataTemplateInfo> infos,
       SourceProductionContext context,
       CancellationToken cancellationToken)
@@ -88,7 +98,7 @@ internal sealed class DataTemplateGenerator : IncrementalExtensionsGeneratorBase
             GenerationTypeInfo generationTypeInfo;
             if (info.PropertyTypeIsDataTemplateSelector)
             {
-                var methodBuilder = builder
+                var methodBuilder = classBuilder
                     .AddMethod(info.PropertyName)
                     .MakePublicMethod()
                     .MakeStaticMethod()
@@ -118,34 +128,29 @@ internal sealed class DataTemplateGenerator : IncrementalExtensionsGeneratorBase
                 string delegateName = info.PropertyTypeName.Camelcase() + "Delegate";
                 if (info.PropertyTypeIsControlTemplate)
                 {
-                    var parameterized1 = builder
+                    
+                    var methodBuilder = classBuilder
                         .AddMethod(info.PropertyName)
                         .MakePublicMethod()
                         .MakeStaticMethod()
                         .AddAttribute("global::Uno.Extensions.Markup.Internals.MarkupExtensionAttribute");
                     var controlType = "TControl";
-                    generationTypeInfo = info.GenerationTypeInfo;
-                    if (!generationTypeInfo.IsSealed)
+                    if (!info.GenerationTypeInfo.IsSealed)
                     {
-                        parameterized1
+                        methodBuilder
                             .AddGeneric("TControl", b => b.AddConstraint(info.GenerationTypeInfo.TypeFullyQualifiedName))
                             .WithReturnType("TControl")
                             .AddParameter("this TControl", "element");
                     }
                     else
                     {
-                        generationTypeInfo = info.GenerationTypeInfo;
-                        controlType = generationTypeInfo.TypeFullyQualifiedName;
-                        var methodBuilder = parameterized1;
-                        generationTypeInfo = info.GenerationTypeInfo;
-                        var fullyQualifiedName = generationTypeInfo.TypeFullyQualifiedName;
-                        var parameterized2 = methodBuilder.WithReturnType(fullyQualifiedName);
-                        generationTypeInfo = info.GenerationTypeInfo;
-                        var typeName = "this " + generationTypeInfo.TypeFullyQualifiedName;
-                        parameterized2.AddParameter(typeName, "element");
+                        controlType = info.GenerationTypeInfo.TypeFullyQualifiedName;
+                        methodBuilder
+                            .WithReturnType(info.GenerationTypeInfo.TypeFullyQualifiedName)
+                            .AddParameter("this " + info.GenerationTypeInfo.TypeFullyQualifiedName, "element");
                     }
                     if (info.PropertyTypeName == "ControlTemplate")
-                        parameterized1
+                        methodBuilder
                             .AddParameter("Func<UIElement>", delegateName)
                             .WithBody(w =>
                             {
@@ -153,7 +158,7 @@ internal sealed class DataTemplateGenerator : IncrementalExtensionsGeneratorBase
                                 w.AppendLine("return element;");
                             });
                     else
-                        parameterized1
+                        methodBuilder
                             .AddGeneric("TRootControl", b => b.AddConstraint("UIElement"))
                             .AddParameter($"Func<{controlType}, TRootControl>", delegateName)
                             .WithBody(w =>
@@ -163,24 +168,20 @@ internal sealed class DataTemplateGenerator : IncrementalExtensionsGeneratorBase
                                 w.AppendUnindentedLine("#nullable enable");
                                 w.AppendLine("return element;");
                             });
+                    
                 }
                 else if (!info.PropertyTypeIsDataTemplate)
                 {
-                    var methodBuilder = builder
+                    
+                    var methodBuilder = classBuilder
                         .AddMethod(info.PropertyName)
                         .MakePublicMethod()
-                        .MakeStaticMethod();
-                    generationTypeInfo = info.GenerationTypeInfo;
-                    var fullyQualifiedName = generationTypeInfo.TypeFullyQualifiedName;
-                    var parameterized3 = methodBuilder
-                        .WithReturnType(fullyQualifiedName)
-                        .AddAttribute("global::Uno.Extensions.Markup.Internals.MarkupExtensionAttribute");
-                    generationTypeInfo = info.GenerationTypeInfo;
-                    var typeName = "this " + generationTypeInfo.TypeFullyQualifiedName;
-                    var parameterized4 = parameterized3
-                        .AddParameter(typeName, "element");
+                        .MakeStaticMethod()
+                        .WithReturnType(info.GenerationTypeInfo.TypeFullyQualifiedName)
+                        .AddAttribute("global::Uno.Extensions.Markup.Internals.MarkupExtensionAttribute")
+                        .AddParameter("this " + info.GenerationTypeInfo.TypeFullyQualifiedName, "element");
                     if (info.PropertyTypeName == "ItemsPanelTemplate")
-                        parameterized4
+                        methodBuilder
                             .AddGeneric("TItem", b => b.AddConstraint("UIElement, new()"))
                             .AddParameterWithNullValue("Action<TItem>?", "configureItemsPanel")
                             .WithBody(w =>
@@ -189,7 +190,7 @@ internal sealed class DataTemplateGenerator : IncrementalExtensionsGeneratorBase
                                 w.AppendLine("return element;");
                             });
                     else
-                        parameterized4
+                        methodBuilder
                             .AddParameter("Func<UIElement>", delegateName)
                             .WithBody(w =>
                             {
@@ -199,23 +200,19 @@ internal sealed class DataTemplateGenerator : IncrementalExtensionsGeneratorBase
                                     w.AppendLine($"element.{info.PropertyName} = DataTemplateHelpers.FrameworkTemplate<{info.PropertyTypeFullyQualifiedName}>({delegateName});");
                                 w.AppendLine("return element;");
                             });
+                    
                 }
                 else
                 {
-                    var methodBuilder1 = builder
+                    
+                    classBuilder
                         .AddMethod(info.PropertyName)
                         .MakePublicMethod()
                         .MakeStaticMethod()
-                        .AddAttribute("global::Uno.Extensions.Markup.Internals.MarkupExtensionAttribute");
-                    generationTypeInfo = info.GenerationTypeInfo;
-                    var fullyQualifiedName1 = generationTypeInfo.TypeFullyQualifiedName;
-                    var parameterized5 = methodBuilder1
-                        .WithReturnType(fullyQualifiedName1)
-                        .AddGeneric("TItem");
-                    generationTypeInfo = info.GenerationTypeInfo;
-                    var typeName1 = "this " + generationTypeInfo.TypeFullyQualifiedName;
-                    parameterized5
-                        .AddParameter(typeName1, "element")
+                        .AddAttribute("global::Uno.Extensions.Markup.Internals.MarkupExtensionAttribute")
+                        .WithReturnType(info.GenerationTypeInfo.TypeFullyQualifiedName)
+                        .AddGeneric("TItem")
+                        .AddParameter("this " + info.GenerationTypeInfo.TypeFullyQualifiedName, "element")
                         .AddParameter("Func<TItem, UIElement>", delegateName)
                         .WithBody(w =>
                         {
@@ -227,39 +224,28 @@ internal sealed class DataTemplateGenerator : IncrementalExtensionsGeneratorBase
                             w.AppendUnindentedLine("#nullable enable");
                             w.AppendLine("return element;");
                         });
-                    var methodBuilder2 = builder
+                    classBuilder
                         .AddMethod(info.PropertyName)
                         .MakePublicMethod()
                         .MakeStaticMethod()
-                        .AddAttribute("global::Uno.Extensions.Markup.Internals.MarkupExtensionAttribute");
-                    generationTypeInfo = info.GenerationTypeInfo;
-                    var fullyQualifiedName2 = generationTypeInfo.TypeFullyQualifiedName;
-                    var parameterized6 = methodBuilder2.WithReturnType(fullyQualifiedName2);
-                    generationTypeInfo = info.GenerationTypeInfo;
-                    var typeName2 = "this " + generationTypeInfo.TypeFullyQualifiedName;
-                    parameterized6
-                        .AddParameter(typeName2, "element")
+                        .AddAttribute("global::Uno.Extensions.Markup.Internals.MarkupExtensionAttribute")
+                        .WithReturnType(info.GenerationTypeInfo.TypeFullyQualifiedName)
+                        .AddParameter("this " + info.GenerationTypeInfo.TypeFullyQualifiedName, "element")
                         .AddParameter("Func<UIElement>", delegateName)
                         .WithBody(w =>
                         {
                             w.AppendLine($"element.{info.PropertyName} = DataTemplateHelpers.DataTemplate(() => {delegateName}());");
                             w.AppendLine("return element;");
                         });
-                    var methodBuilder3 = builder
-                        .AddMethod(info.PropertyName).
-                        MakePublicMethod()
+                    classBuilder
+                        .AddMethod(info.PropertyName)
+                        .MakePublicMethod()
                         .MakeStaticMethod()
-                        .AddAttribute("global::Uno.Extensions.Markup.Internals.MarkupExtensionAttribute");
-                    generationTypeInfo = info.GenerationTypeInfo;
-                    var fullyQualifiedName3 = generationTypeInfo.TypeFullyQualifiedName;
-                    var parameterized7 = methodBuilder3
-                        .WithReturnType(fullyQualifiedName3)
+                        .AddAttribute("global::Uno.Extensions.Markup.Internals.MarkupExtensionAttribute")
+                        .WithReturnType(info.GenerationTypeInfo.TypeFullyQualifiedName)
                         .AddGeneric("TItem")
-                        .AddGeneric("TRoot", b => b.AddConstraint("UIElement, new()"));
-                    generationTypeInfo = info.GenerationTypeInfo;
-                    var typeName3 = "this " + generationTypeInfo.TypeFullyQualifiedName;
-                    parameterized7
-                        .AddParameter(typeName3, "element")
+                        .AddGeneric("TRoot", b => b.AddConstraint("UIElement, new()"))
+                        .AddParameter("this " + info.GenerationTypeInfo.TypeFullyQualifiedName, "element")
                         .AddParameter("Action<TItem, TRoot>", "configureRoot")
                         .WithBody(w =>
                         {
@@ -268,8 +254,36 @@ internal sealed class DataTemplateGenerator : IncrementalExtensionsGeneratorBase
                             w.AppendUnindentedLine("#nullable enable");
                             w.AppendLine("return element;");
                         });
+                    
                 }
             }
         }
     }
+
+    private static MethodBuilder CreatePropertyBuilder(
+          ref ClassBuilder classBuilder,
+          GenerationTypeInfo generationTypeInfo,
+          string propertyName,
+          bool forceStronglyTyped = false
+        )
+    {
+        var parameterized = classBuilder
+            .AddMethod(propertyName)
+            .MakePublicMethod()
+            .MakeStaticMethod()
+            .AddAttribute("global::Uno.Extensions.Markup.Internals.MarkupExtensionAttribute");
+
+        if (generationTypeInfo.IsSealed | forceStronglyTyped)
+            parameterized
+                .AddParameter("this " + generationTypeInfo.TypeFullyQualifiedName, "element")
+                .WithReturnType(generationTypeInfo.TypeFullyQualifiedName);
+        else
+            parameterized
+                .AddGeneric("T", _ => _.AddConstraint(generationTypeInfo.TypeFullyQualifiedName))
+                .AddParameter("this T", "element")
+                .WithReturnType("T");
+
+        return parameterized;
+    }
+
 }

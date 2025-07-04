@@ -17,10 +17,12 @@ internal static class ExtensibilityLocator
         [.. typeof(ExtensibilityLocator)
                 .Assembly
                 .GetTypes()
-                .Where(x => 
-                    typeof(ITypeExtension).IsAssignableFrom(x) 
+                .Where
+                (x => 
+                    typeof(P42.Uno.MarkupGenerator.Extensibility.ITypeExtension).IsAssignableFrom(x)
                     && !x.IsInterface 
-                    && !x.IsAbstract)
+                    && !x.IsAbstract
+                )
                 .Select(x => (ITypeExtension)Activator.CreateInstance(x))
         ];
 }

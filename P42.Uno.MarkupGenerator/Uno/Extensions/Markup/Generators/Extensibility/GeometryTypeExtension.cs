@@ -14,7 +14,8 @@ internal sealed class GeometryTypeExtension : ITypeExtension
 {
     public bool CanExtend(string qualifiedTypeName)
     {
-        return qualifiedTypeName == "global::Microsoft.UI.Xaml.Media.Geometry";
+        return false;
+        //return qualifiedTypeName == "global::Microsoft.UI.Xaml.Media.Geometry";
     }
 
     public void WriteAttachedPropertyBuilderExtensions(
